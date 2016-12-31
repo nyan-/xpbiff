@@ -1,0 +1,34 @@
+!XPbiff*info_base.hSpace: 0
+!XPbiff*info_base.vSpace: 0
+
+! For Color Display
+
+!XPbiff*info_base.background: lightgray
+!XPbiff*info.foreground: white
+!XPbiff*info.background: darkolivegreen
+!XPbiff*popdown_button.background: lightslateblue
+!XPbiff*popdown_button.foreground: pink
+
+! xpbiff application resources. 
+! Applied by kura@nacsis.ac.jp (Akihisa Kurashima)
+
+!XPbiff.arrivePixmap: heno
+!XPbiff.nomailPixmap: shit
+!XPbiff.arriveForeground: white
+!XPbiff.arriveBackground: red
+!XPbiff.nomailForeground: white
+!XPbiff.nomailBackground: navy
+!XPbiff.mono: False
+!XPbiff.popupGeometry: +0+0
+!XPbiff.raise: True
+!XPbiff.stayRaised: False
+!XPbiff.animate: True
+!XPbiff.popup: True
+!XPbiff.bell: True
+!XPbiff.popdown: True
+!XPbiff*bitmapFilePath: /usr/private/your_private_bitmap_filepath
+!XPbiff.spoolPath: /var/spool/your_system_mailpath
+!XPbiff.mhscan: False
+!XPbiff.scanCommandPath: /usr/local/bin/mh
+!XPbiff.scanCommand: scan -width 160 -format '%<(mymbox{from})To: %(friendly{to})%|From: %<{posted-from}%(friendly{posted-from})%|%(friendly{from})%>%>%<{subject}\nSubject: %{subject}%>' -file
+XPbiff*international: TRUE

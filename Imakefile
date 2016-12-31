@@ -1,0 +1,65 @@
+XCOMM SCCS ID : @(#)Imakefile	1.9	10/25/93
+XCOMM
+XCOMM   Imakefile - Imakefile for xpbiff
+XCOMM 
+XCOMM   Author: Kazuhiko Shutoh, 1990 - 1992.
+XCOMM
+XCOMM   Permission to use, copy, modify and distribute without charge this
+XCOMM   software, documentation, images, etc. is granted, provided that this 
+XCOMM   comment and the author's name is retained.  The author assumes no 
+XCOMM   responsibility for lost sleep as a consequence of use of this software.
+XCOMM
+XCOMM   Send any comments, bug reports, etc. to: shutoh@lab4.yamaha.co.jp
+XCOMM
+
+#include "config.h"
+
+#ifdef XPM
+         XPMLIB = -lXpm
+#ifdef DepXpmLib
+      DEPXPMLIB = DepXpmLib
+#endif
+        CONVSRC = StrToPmap.c LocPixmap.c
+        CONVOBJ = StrToPmap.o LocPixmap.o
+#endif
+
+#ifdef XI18N
+#XCOMM      XWCHARLIB = -lXwchar
+      XWCHARLIB =
+#ifdef DepXawLib
+      DEPXAWLIB = DepXawLib
+#endif
+#ifdef DepXwcharLib
+   DEPXWCHARLIB = DepXwcharLib
+#endif
+#ifdef Xi18nLibDir
+    XI18NLIBDIR = Xi18nLibDir
+#endif
+#ifdef Xi18nIncDir
+    XI18NINCDIR = Xi18nIncDir
+#endif
+#endif
+
+#ifdef SUN_AUDIO
+    AUDIOINCDIR = AudioIncDir
+#endif
+
+#ifdef YOUBIN
+    DEFINES = -DBINDIR=\"YoubinBinDir\"
+#endif
+
+#ifdef SOLARIS
+   UCBLIBDIR = UcbLibDir
+   UCBLIB = -lucb -lelf
+#endif
+
+       INCLUDES = -I$(TOP)/X11 -I$(AUDIOINCDIR)
+ EXTRA_INCLUDES = $(XI18NINCDIR) -I$(TOP)/X11
+  LOCAL_LDFLAGS = $(XI18NLIBDIR) $(UCBLIBDIR)
+        DEPLIBS = $(DEPXPMLIB) XawClientDepLibs $(DEPXWCHARLIB)
+LOCAL_LIBRARIES = $(XPMLIB) XawClientLibs $(XWCHARLIB)
+EXTRA_LIBRARIES = $(UCBLIB) -lm ExtraLibraries
+           SRCS = xpbiff.c $(CONVSRC)
+           OBJS = xpbiff.o $(CONVOBJ)
+
+ComplexProgramTarget(xpbiff)

@@ -1,0 +1,6 @@
+*popdown_button.label: PopDown
+*info_base.background: lightgray
+*info.foreground: white
+*info.background: darkolivegreen
+*popdown_button.background: lightslateblue
+*popdown_button.foreground: pink
