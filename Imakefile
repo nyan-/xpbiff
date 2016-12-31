@@ -62,4 +62,4 @@ EXTRA_LIBRARIES = $(UCBLIB) -lm ExtraLibraries
            SRCS = xpbiff.c $(CONVSRC)
            OBJS = xpbiff.o $(CONVOBJ)
 
-ComplexProgramTarget(xpbiff)
+ComplexProgramTargetNoMan(xpbiff)

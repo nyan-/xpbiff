@@ -60,6 +60,7 @@ static char	sccsid[] = "@(#)xpbiff.c	1.27	10/25/93";
 
 #include "config.h"
 
+#include <paths.h>	/* _PATH_MAILDIR */
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
 #include <X11/Shell.h>
@@ -73,6 +74,12 @@ static char	sccsid[] = "@(#)xpbiff.c	1.27	10/25/93";
 #define min(x,y)	((x) < (y)? (x): (y))
 #endif
 #endif /* SUN_AUDIO */
+
+#ifdef BSD_AUDIO
+#include <sys/soundcard.h>
+#define MAX_SOUND_VOL 95
+#define MIN_SOUND_VOL 05
+#endif
 
 #ifndef X11R3
 #include <X11/Xaw/Box.h>
@@ -116,7 +123,11 @@ typedef Pixmap		Pixmap2;
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+#ifdef HAVE_GETPWUID
+#include <pwd.h>
+#endif /* HAVE_GETPWUID */
 
 #ifdef YOUBIN
 
@@ -149,11 +160,7 @@ typedef Pixmap		Pixmap2;
 
 #ifndef YOUBIN
 
-#ifdef USG
-#define SPOOLPATH	"/usr/mail/"
-#else
-#define SPOOLPATH	"/usr/spool/mail/"
-#endif
+#define SPOOLPATH	_PATH_MAILDIR
 
 #else /* YOUBIN */
 
@@ -324,7 +331,7 @@ static String		fallback_resources[] = {
     NULL
 };
 
-#ifdef SUN_AUDIO
+#if (defined(SUN_AUDIO) || defined(BSD_AUDIO))
 String mail_sndfile;
 int volume;
 #endif
@@ -399,7 +406,7 @@ static XtResource	resources[] = {
     {"nomailPixmapMask", "NomailPixmapMask", XtRBitmap, sizeof(Pixmap),
 	 (Cardinal)&noPixmapMask, XtRBitmap, None},
 #endif
-#ifdef SUN_AUDIO
+#if (defined(SUN_AUDIO) || defined(BSD_AUDIO))
     {"mailSndFile", "MailSndFile", XtRString, sizeof(String),
      (Cardinal)&mail_sndfile, XtRString, None},
     {"volume", "Volume", XtRInt, sizeof(int),
@@ -445,7 +452,7 @@ static XrmOptionDescRec options[] = {
     {"-server",		"*server",		XrmoptionSepArg,	NULL},
     {"-preserve",	"*preserve",		XrmoptionNoArg,		"true"},
 #endif /* YOUBIN */
-#ifdef SUN_AUDIO
+#if (defined(SUN_AUDIO) || defined(BSD_AUDIO))
     {"-sndfile",	"*mailSndFile",		XrmoptionSepArg,	NULL},
     {"-volume",		"*volume",		XrmoptionSepArg,	NULL},
 #endif
@@ -461,6 +468,7 @@ extern void	CvtStringToPixmap();
 #ifdef JCONVERT
 static Locale_ent	locale_list[] = {
     {"ja_JP.EUC",	EUC},
+    {"ja_JP.eucJP",	EUC},
     {"ja_JP.SJIS",	SJIS},
     {"ja_JP.jis7",	JIS},
     {"ja_JP.jis8",	JIS},
@@ -485,9 +493,9 @@ char	      **argv;
     XGCValues		values;
     XtTranslations	newTranslations;
     static XtActionsRec redrawActions[] = {
-	{"expose", (XtCallbackProc) redraw_callback},
-	{"select", (XtCallbackProc) popup_again},
-	{"quit", (XtCallbackProc) quit},
+	{"expose", (XtActionProc) redraw_callback},
+	{"select", (XtActionProc) popup_again},
+	{"quit", (XtActionProc) quit},
     };
 
     static char		*overrideTranslations =
@@ -498,6 +506,9 @@ char	      **argv;
     int			dummy;
     int			i;
 
+#ifdef HAVE_GETPWUID
+    struct passwd	*pw;
+#endif
 #ifdef JCONVERT
     char		*locale_name;
     Locale_ent		*p;
@@ -514,28 +525,40 @@ char	      **argv;
 #endif /* !YOUBIN */
 
 #ifdef YOUBIN
-	if ((prog_name = strrchr(argv[0], '/')) != NULL) {
-	    prog_name++;
-	} else {
-	    prog_name = argv[0];
-	}
+    if ((prog_name = strrchr(argv[0], '/')) != NULL) {
+	prog_name++;
+    } else {
+	prog_name = argv[0];
+    }
 #else	/* !YOUBIN */
-    if (spoolPath != NULL && spoolPath[0] != '\0')
+    if (spoolPath != NULL && spoolPath[0] != '\0') {
 	strcpy(spool_path, spoolPath);
-    else
+    } else {
     	strcpy(spool_path, SPOOLPATH);
-    if (spool_path[strlen(spool_path) - 1] != '/')
+    }
+    if (spool_path[strlen(spool_path) - 1] != '/') {
 	strcat(spool_path, "/");
+    }
+
 #ifdef GETENV_MAIL
-    if (getenv("MAIL") != NULL)
+    if (getenv("MAIL") != NULL) {
 	strcpy(spool_path, getenv("MAIL"));
-    else
-#endif
-#ifndef NO_CUSERID
-	strcat(spool_path, cuserid(NULL));
-#else
+    } else {
+#endif /* GETENV_MAIL */
+
+#ifdef HAVE_GETPWUID
+	pw = getpwuid(getuid());
+	strcat(spool_path, pw->pw_name);
+#elif defined(NO_CUSERID)
 	strcat(spool_path, getenv("USER"));
-#endif
+#else
+	strcat(spool_path, (char *)cuserid(NULL));
+#endif /* NO_CUSERID && HAVE_GETPWUID */
+
+#ifdef GETENV_MAIL
+    }
+#endif /* GETENV_MAIL */
+
 #endif /* !YOUBIN */
 
 #ifdef XI18N
@@ -646,7 +669,7 @@ char	      **argv;
 	    fprintf(stderr, "		[-server host]\n");
 	    fprintf(stderr, "		[-nopreserve]\n");
 #endif
-#ifdef SUN_AUDIO
+#if (defined(SUN_AUDIO) || defined(BSD_AUDIO))
 	    fprintf(stderr, "		[-sndfile audio_file]\n");
 	    fprintf(stderr, "		[-volume percentage]\n");
 #endif
@@ -775,7 +798,7 @@ char	      **argv;
     /* Interval timer start	 */
 #ifndef YOUBIN
     polling_id = XtAppAddTimeOut(app_con,
-				 (unsigned long) polling_time, Polling, NULL);
+				 (unsigned long) polling_time, (XtTimerCallbackProc) Polling, NULL);
 #else  /* YOUBIN */
     if (server == NULL) {
 	gethostname(serv_name, sizeof(serv_name));
@@ -931,7 +954,7 @@ XtIntervalId	*id;
 		PopupMailHeader(mail_header);
 	    XSync(XtDisplay(toplevel), 0);
 	    if (bell == True)
-		beep(XtDisplay(toplevel), 0);
+		beep(XtDisplay(toplevel));
 	    /*	XBell(XtDisplay(toplevel), 0); */
 	}
 	else if (file_stat.st_size > mail_size) {
@@ -955,7 +978,8 @@ XtIntervalId	*id;
 		PopupMailHeader(mail_header);
 	    XSync(XtDisplay(toplevel), 0);
 	    if (bell == True)
-		XBell(XtDisplay(toplevel), 0);
+		beep(XtDisplay(toplevel));
+	    /*	XBell(XtDisplay(toplevel), 0); */
 	}
 	else {
 	    mail_size = file_stat.st_size;
@@ -982,7 +1006,7 @@ XtIntervalId	*id;
     /* No arrive */
 
     polling_id = XtAppAddTimeOut(XtWidgetToApplicationContext(toplevel),
-				 (unsigned long) polling_time, Polling, NULL);
+				 (unsigned long) polling_time, (XtTimerCallbackProc) Polling, NULL);
 
 }
 #endif /* !YOUBIN */
@@ -1071,7 +1095,7 @@ char	       *head;
     if (popdown == True) {
 	popdown_button = XtCreateManagedWidget("popdown_button", commandWidgetClass, info_base, NULL,
 					       ZERO);
-	XtAddCallback(popdown_button, XtNcallback, BreakPopup, (XtPointer) NULL);
+	XtAddCallback(popdown_button, XtNcallback, (XtCallbackProc) BreakPopup, (XtPointer) NULL);
     }
     arg_count = 0;
     XtSetArg(args[arg_count], XtNlabel, head);
@@ -1147,7 +1171,8 @@ caddr_t call_data;
 		PopupMailHeader(mail_header);
 	    XSync(XtDisplay(toplevel), 0);
 	    if (bell == True)
-		XBell(XtDisplay(toplevel), 0);
+		beep(XtDisplay(toplevel));
+	    /*	XBell(XtDisplay(toplevel), 0); */
 	}
 	else {
 	    mail_size = file_stat.st_size;
@@ -1169,7 +1194,7 @@ caddr_t call_data;
 
     XtRemoveTimeOut(polling_id);
     polling_id = XtAppAddTimeOut(XtWidgetToApplicationContext(toplevel),
-				 (unsigned long) polling_time, Polling, NULL);
+				 (unsigned long) polling_time, (XtTimerCallbackProc) Polling, NULL);
 }
 #endif /* !YOUBIN */
 
@@ -1749,13 +1774,22 @@ static char *mh_scan()
 static void beep (display)
     Display *display; 
 {
-#ifdef SUN_AUDIO
+#if defined(SUN_AUDIO) || defined(BSD_AUDIO)
     int		audiofd, filefd;
-    int		rn, wn, len;
+    int		rn;
+#ifdef SUN_AUDIO
+    int		wn, len;
     unsigned char	buf[256];
     Audio_filehdr	*au_hdr;
     audio_info_t 	ais;
-
+#elif defined(BSD_AUDIO)
+    int mixerfd, mixerid, supported;
+    static int bsize;
+    static char *buf;
+    struct stat sbuf;
+    int level, level_tmp;
+#endif
+	
     if (mail_sndfile) {
 	audiofd = open( "/dev/audio", O_WRONLY | O_NDELAY ); 
 	if (audiofd < 0)
@@ -1766,6 +1800,7 @@ static void beep (display)
 		return;
 	    }
 
+#ifdef SUN_AUDIO
 	if( ioctl( audiofd, AUDIO_GETINFO, &ais ) )
 	    {
 		fprintf(stderr, "%s: Problem retrieving /dev/audio info.\n",
@@ -1782,6 +1817,24 @@ static void beep (display)
 	    return;
 	}
 
+#elif defined(BSD_AUDIO)
+	/* Open the mixer device */
+	mixerfd = open ("/dev/mixer", O_RDWR, 0);
+	if (mixerfd > 0)
+	    {
+		if (volume > MAX_SOUND_VOL)
+			volume = MAX_SOUND_VOL;
+		else if (volume < MIN_SOUND_VOL)
+			volume = MIN_SOUND_VOL;
+		mixerid = SOUND_MIXER_PCM;
+		    /* storing volume level */
+		ioctl(mixerfd,MIXER_READ(mixerid),&level_tmp);
+
+		level = (volume << 8) | volume;
+		ioctl(mixerfd,MIXER_WRITE(mixerid),&level);
+	}
+#endif
+
 	filefd = open(mail_sndfile, O_RDONLY);
 	if (filefd < 0)
 	    {
@@ -1791,6 +1844,7 @@ static void beep (display)
 		return;
 	    }
 
+#ifdef SUN_AUDIO
 	/* Read in the audio header */
 	rn = read(filefd, buf, sizeof(Audio_filehdr)); 
 
@@ -1841,12 +1895,28 @@ static void beep (display)
 		    usleep(1000);
 		}
 	    }
-	close(audiofd);
+#elif defined(BSD_AUDIO)
+	ioctl(audiofd, SNDCTL_DSP_RESET, 0);
+	fstat(filefd, &sbuf);
+	bsize = sbuf.st_size;
+	buf = malloc((u_int)bsize);
+	if ( (rn = read(filefd, buf, bsize)) > 0)
+	    write(audiofd, buf, rn);
+	ioctl(audiofd, SNDCTL_DSP_SYNC, 0);
+	free(buf);
+	if (mixerfd > 0)
+	    {
+		    /* restoring volume level */
+		ioctl(mixerfd,MIXER_WRITE(mixerid),&level_tmp);
+		close(mixerfd);
+	    }
+#endif
+	close(audiofd); 
 	close(filefd);
     }
     else
-    XBell (display, volume);
-#else  /* !SUN_AUDIO */
+    XBell (display, 0);
+#else  /* !SUN_AUDIO && !BSD_AUDIO */
     XBell (display, 0);
 #endif /* SUN_AUDIO */
     return;
@@ -1917,12 +1987,12 @@ read_from_child(w, fid, id)
 
 		if (popup_time)
 		    XtAppAddTimeOut(XtWidgetToApplicationContext(toplevel),
-				    (unsigned long) popup_time, BreakPopup, NULL);
+				    (unsigned long) popup_time, (XtTimerCallbackProc) BreakPopup, NULL);
 	    }
 	}
 	XSync(XtDisplay(toplevel), 0);
 	if (bell == True) {
-	    beep(XtDisplay(toplevel), 0);
+	    beep(XtDisplay(toplevel));
 	}
     } else if (mail_size < saved_mail_size){
 	/* No mail */
@@ -2031,7 +2101,7 @@ popup_again(widget, client_data, call_data)
 	    }
 	    if (popup_time)
 		XtAppAddTimeOut(XtWidgetToApplicationContext(toplevel),
-				(unsigned long) popup_time, BreakPopup, NULL);
+				(unsigned long) popup_time, (XtTimerCallbackProc) BreakPopup, NULL);
 	}
 	if (raise == True) {
 	    XRaiseWindow(XtDisplay(toplevel), XtWindow(toplevel));
