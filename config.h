@@ -19,7 +19,7 @@
  *	For Solaris
  */
 #undef SOLARIS
-#undef UcbLibDir	-L/usr/ucblib
+#undef UcbLibDir
 
 /*
  *	For slow work station
@@ -58,7 +58,7 @@
 /*
  *	Set Local Spool pathname
  */
-#undef SPOOLPATH	"/usr/mail"
+#undef SPOOLPATH
 
 /*
  *	For X pixmap
@@ -109,7 +109,7 @@
  *	For SUN Audio
  */
 #undef SUN_AUDIO
-#undef AudioIncDir /usr/demo/SOUND
+#undef AudioIncDir
 
 /*
  * For BSD Audio (FreeBSD)
